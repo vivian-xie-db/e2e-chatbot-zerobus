@@ -8,7 +8,7 @@ import logging
 logging.basicConfig(
     format="%(levelname)s [%(asctime)s] %(name)s - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
-    level=logging.DEBUG
+    level=logging.INFO
 )
 
 def _get_endpoint_task_type(endpoint_name: str) -> str:

@@ -1,5 +1,12 @@
 mlflow>=2.21.2
-streamlit==1.44.1
+dash>=2.14.0
+dash-bootstrap-components>=1.5.0
 psycopg[binary]>=3.1.0
 psycopg-pool>=3.1.0
 databricks-sdk>=0.1.0
+protobuf>=6.31.0,<7
+grpcio>=1.68.0,<2.0
+requests>=2.28.0,<3.0
+grpcio-tools>=1.60.0,<2.0
+python-dotenv>=0.19.0
+databricks_zerobus_ingest_sdk-0.1.0-py3-none-any.whl

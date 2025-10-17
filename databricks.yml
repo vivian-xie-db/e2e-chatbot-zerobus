@@ -1,0 +1,71 @@
+# Databricks Asset Bundle for E2E Chatbot App with Zerobus Telemetry
+bundle:
+  name: e2e-chatbot-app-zerobus
+
+variables:
+  # Databricks Model Serving
+  serving_endpoint:
+    type: string  
+    description: "The name of the Databricks Model Serving endpoint"
+    default: "your-serving-endpoint"
+  # Zerobus Telemetry Configuration
+  zerobus_server_endpoint:
+    type: string
+    description: "Zerobus server endpoint for telemetry ingestion"
+    default: "grpc://your-zerobus-server:443"
+  zerobus_table:
+    type: string
+    description: "The name of the Unity Catalog table for telemetry data"
+    default: "your-table-name"
+  zerobus_host:
+    type: string
+    description: "The URL of the Databricks workspace"
+    default: "https://your-workspace.cloud.databricks.com"
+  databricks_client_id:
+    type: string
+    description: "The ID of the Databricks OAuth client"
+    default: "your-client-id"
+  databricks_client_secret:
+    type: string
+    description: "The secret of the Databricks OAuth client"
+    default: "your-client-secret"
+
+resources:
+  apps:
+    zerobus-chatbot:
+      name: "e2e-chatbot-zerobus-${bundle.target}"
+      description: "End-to-end chatbot application with Databricks AgentBricks and Zerobus telemetry"
+      source_code_path: "."
+      
+      config:
+        command:
+          - "python"
+          - "app_dash.py"
+        
+        env:
+          - name: "SERVING_ENDPOINT"
+            value: "${var.serving_endpoint}"
+          
+          - name: "ZEROBUS_SERVER_ENDPOINT"
+            value: "${var.zerobus_server_endpoint}"
+          - name: "ZEROBUS_TABLE"
+            value: "${var.zerobus_table}"
+          - name: "ZEROBUS_HOST"
+            value: "${var.zerobus_host}"
+          - name: "DATABRICKS_CLIENT_ID"
+            value: "${var.databricks_client_id}"
+          - name: "DATABRICKS_CLIENT_SECRET"
+            value: "${var.databricks_client_secret}"
+      resources:
+        - name: "model_serving_endpoints"
+          serving_endpoint:
+            name: "${var.serving_endpoint}"
+            permission: "CAN_QUERY"
+              
+targets:
+  dev:
+    mode: development
+    default: true
+  
+  production:
+    mode: production

@@ -1,0 +1,58 @@
+[project]
+name = "e2e-chatbot-app-zerobus"
+version = "0.1.0"
+description = "End-to-end chatbot application with Databricks AgentBricks and Zerobus telemetry"
+readme = "README.md"
+requires-python = ">=3.9,<3.14"
+dependencies = [
+    "mlflow>=2.21.2",
+    "dash>=2.14.0",
+    "dash-bootstrap-components>=1.5.0",
+    "psycopg[binary]>=3.1.0",
+    "psycopg-pool>=3.1.0",
+    "databricks-sdk>=0.1.0",
+    "protobuf>=6.31.0,<7",
+    "grpcio>=1.68.0,<2.0",
+    "requests>=2.28.0,<3.0",
+    "grpcio-tools>=1.60.0,<2.0",
+    "python-dotenv>=0.19.0",
+    "databricks-zerobus-ingest-sdk",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+package = false  # This is an application, not a library
+
+[tool.uv.sources]
+databricks-zerobus-ingest-sdk = { path = "databricks_zerobus_ingest_sdk-0.1.0-py3-none-any.whl" }
+
+# Zerobus SDK configuration:
+# The local wheel file is automatically installed via [tool.uv.sources].
+# Just run: uv sync
+# 
+# Note: There may be a protobuf version conflict between Dash and Zerobus SDK,
+# but protobuf 6.x is backward compatible and works in practice.
+# setup_telemetry.sh will force-reinstall to ensure proper protobuf version.
+
+[tool.ruff]
+line-length = 120
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E501"]
+
+[tool.black]
+line-length = 120
+target-version = ["py39"]
+

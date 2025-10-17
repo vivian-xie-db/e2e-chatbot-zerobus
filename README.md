@@ -1,235 +1,200 @@
-# 🧱 E2E Chatbot App
+# E2E Chatbot App with Zerobus Telemetry
 
-A production-ready chatbot application built with **Databricks Model Serving endpoint (works with AgentBricks)** and **LakeBase**, featuring a modern Streamlit interface with chat history persistence and real-time streaming responses.
+![Chatbot App](assets/chatbot0.png)
+![Chatbot App](assets/chatbot2.png)
+![Chatbot App](assets/chatbot1.png)
 
-![Chatbot App Screenshot](chatbot-app.png)
+An end-to-end chatbot application built with **Databricks AgentBricks** and **Zerobus telemetry integration**. This application demonstrates best practices for building AI-powered conversational interfaces with comprehensive telemetry tracking, deployed using **Databricks Asset Bundles (DABS)**.
 
-## Overview
+## 🌟 Features
 
-This application demonstrates an end-to-end conversational AI solution leveraging the Databricks ecosystem:
+- 🤖 **AI-Powered Chat Interface**: Beautiful Dash-based UI for conversational AI interactions
+- 📊 **Real-time Telemetry**: Comprehensive event tracking using Databricks Zerobus SDK
+- 🔄 **Feedback Loop**: Built-in thumbs up/down feedback mechanism for model improvement
+- 💾 **Unity Catalog Integration**: Telemetry data stored in Unity Catalog tables
+- 🎨 **Modern UI/UX**: Responsive design with Bootstrap components
+- 🔐 **OAuth Authentication**: Secure authentication with Databricks OAuth
+- 📈 **Model Serving Integration**: Direct integration with Databricks Model Serving endpoints
+- 🚀 **Databricks Apps Ready**: Deploy directly to Databricks Apps using Asset Bundles
+- 🔄 **CI/CD Integration**: GitHub Actions workflow for automated DABS deployment
 
-- **🧱 AgentBricks**: Powered by Databricks' Agent Framework, supporting multiple agent types including ChatAgent, ResponsesAgent, and standard chat completions
-- **🗄️ LakeBase**: PostgreSQL-backed chat history persistence using Databricks LakeBase for reliable data storage
-- **⚡ Streamlit**: Modern, responsive UI with real-time streaming responses
-- **🔐 OAuth Integration**: Secure authentication via Databricks Workspace OAuth tokens
+## 📋 Prerequisites
 
-## Features
+- Python 3.9-3.13
+- [uv](https://github.com/astral-sh/uv) (recommended) or pip
+- Databricks workspace with:
+  - Model Serving endpoint
+  - Unity Catalog table for telemetry
+  - OAuth client credentials
+- Zerobus server endpoint
 
-### Core Functionality
-- **Multi-Agent Support**: Compatible with `chat/completions`, `agent/v2/chat`, and `agent/v1/responses` endpoint types
-- **Streaming Responses**: Real-time token streaming for responsive user experience
-- **Tool Calling**: Full support for function/tool calling with visual feedback
-- **Feedback System**: Built-in thumbs up/down feedback mechanism for continuous improvement
+## 🚀 Quick Start
 
-### Chat History
-- **Persistent Storage**: All conversations saved to LakeBase PostgreSQL database
-- **Historical View**: Browse and view past conversations from the sidebar
-- **Database Resilience**: Graceful fallback if database is unavailable
+### Clone and Setup
 
-### User Experience
-- **Modern UI**: Clean, intuitive interface with emoji indicators
-- **Context Display**: View metadata including request IDs, endpoints, and timestamps
-- **Error Handling**: Automatic retry with non-streaming fallback on errors
-
-## Architecture
-
+```bash
+# Clone the repository
+git clone <your-repo-url>
+cd e2e-chatbot-app-zerobus
 ```
-┌─────────────────┐
-│   Streamlit UI  │
-└────────┬────────┘
-         │
-         ├──► AgentBricks Serving Endpoint
-         │    (ChatAgent/ResponsesAgent/ChatModel)
-         │
-         └──► LakeBase PostgreSQL
-              (Chat History Storage)
-```
+## 🔧 Development
 
-## Prerequisites
+### Generate Protobuf Schema
 
-- **Databricks Workspace**: Access to a Databricks workspace with Model Serving enabled
-- **Serving Endpoint**: A deployed AgentBricks endpoint with `CAN_QUERY` permissions
-- **LakeBase**: PostgreSQL database credentials configured in environment variables
-- **Python**: Version 3.9 or higher
+To regenerate the protobuf schema from your Unity Catalog table:
 
-## Installation
+```bash
+# Set environment variables
+export UC_ENDPOINT="https://your-workspace.cloud.databricks.com"
+export TABLE="catalog.schema.table"
+export CLIENT_ID="your-client-id"
+export CLIENT_SECRET="your-client-secret"
+export MESSAGE_NAME="Chat"
+export OUTPUT="record.proto"
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd e2e-chatbot-app
-   ```
-
-2. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Configure environment variables**
-
-   Create a `.env` file with the following variables:
-
-   ```env
-   # Serving Endpoint
-   SERVING_ENDPOINT=your-endpoint-name
-   
-   # LakeBase PostgreSQL Configuration
-   PGDATABASE=your_database_name
-   PGUSER=your_username
-   PGHOST=your_host.cloud.databricks.com
-   PGPORT=5432
-   PGSSLMODE=require
-   PGAPPNAME=chatbot_app
-   ```
-
-4. **Run the application**
-   ```bash
-   streamlit run app.py
-   ```
-
-## Deployment
-
-### Databricks Apps Deployment
-
-This application is designed for seamless deployment as a Databricks App:
-
-1. **Configure `app.yaml`**
-   
-   The included `app.yaml` file defines the deployment configuration:
-   ```yaml
-   command: ["streamlit", "run", "app.py"]
-   env:
-     - name: STREAMLIT_BROWSER_GATHER_USAGE_STATS
-       value: "false"
-     - name: "SERVING_ENDPOINT"
-       valueFrom: "serving-endpoint"
-   ```
-
-2. **Deploy using Databricks CLI**
-   ```bash
-   databricks apps create chatbot-app \
-     --source-code-path . \
-     --config app.yaml
-   ```
-
-3. **Grant Permissions**
-   
-   Ensure the app has `CAN_QUERY` permissions on your serving endpoint.
-
-## Project Structure
-
-```
-e2e-chatbot-app/
-├── app.py                    # Main Streamlit application
-├── messages.py               # Message classes for chat interface
-├── model_serving_utils.py    # AgentBricks endpoint utilities
-├── requirements.txt          # Python dependencies
-├── app.yaml                 # Databricks app configuration
-├── .env                     # Environment variables (not committed)
-└── README.md               # This file
+# Run setup script
+bash setup_telemetry.sh
 ```
 
-## Key Components
+Or manually:
 
-### AgentBricks Integration
+```bash
+# Generate proto file
+python -m zerobus.tools.generate_proto \
+  --uc-endpoint "https://your-workspace.cloud.databricks.com" \
+  --table "catalog.schema.table" \
+  --client-id "your-client-id" \
+  --client-secret "your-client-secret" \
+  --proto-msg "Chat" \
+  --output "record.proto"
 
-The application intelligently detects and adapts to different endpoint types:
+# Compile proto file
+python -m grpc_tools.protoc \
+  --python_out=. \
+  --proto_path=. \
+  record.proto
+```
 
-- **ChatAgent (`agent/v2/chat`)**: Streaming chat with tool calling support
-- **ResponsesAgent (`agent/v1/responses`)**: Event-based streaming with function calls
-- **Chat Completions**: Standard OpenAI-compatible chat interface
+### Using uv (Recommended)
 
-### LakeBase Chat History
+```bash
+# Install dependencies
+uv sync
 
-Chat interactions are persisted in a PostgreSQL database with the following schema:
+# The Zerobus SDK wheel is automatically installed via pyproject.toml
+```
+
+### Using pip
+
+```bash
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+pip install databricks_zerobus_ingest_sdk-0.1.0-py3-none-any.whl
+```
+
+
+
+### Resource Flow
+
+```text
+┌─────────────────────┐
+│   User Browser      │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐      ┌──────────────────────┐
+│  Chatbot App        │─────▶│  Model Serving       │
+│  (Dash UI)          │      │  Endpoint            │
+│                     │◀─────│  (ML Model)          │
+└──────────┬──────────┘      └──────────────────────┘
+           │
+           ▼
+┌─────────────────────┐
+│  Zerobus Telemetry  │
+│  (Unity Catalog)    │
+└─────────────────────┘
+```
+
+
+#### Configure Variables
+
+Edit `databricks.yml` with your values:
+
+```yaml
+variables:
+  serving_endpoint:
+    default: "your-existing-endpoint-name"
+  zerobus_table:
+    default: "your-catalog.your-schema.telemetry"
+  zerobus_host:
+    default: "https://your-workspace.cloud.databricks.com"
+  databricks_client_id:
+    default: "your-client-id"
+  databricks_client_secret:
+    default: "your-client-secret"
+  # ... other variables
+```
+
+#### Deploy
+
+```bash
+# Validate the bundle configuration
+databricks bundle validate
+
+# Deploy to development
+databricks bundle deploy --target dev
+
+# The bundle will:
+# 1. Deploy the chatbot app
+# 2. Configure environment variables
+# 3. Set up permissions for the model serving endpoint
+```
+
+### Manual Deployment
+
+1. Create an app in Databricks Apps UI
+2. Upload the application files
+3. Configure environment variables in `app.yaml`
+4. Deploy and start the app
+
+
+
+### Telemetry Data
+
+Query your telemetry data in Unity Catalog:
 
 ```sql
-CREATE TABLE {schema}.chat_history (
-    id SERIAL PRIMARY KEY,
-    user_message TEXT NOT NULL,
-    assistant_response TEXT NOT NULL,
-    request_id TEXT,
-    endpoint_name TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-)
+-- View recent chat interactions
+SELECT * FROM catalog.schema.chat_telemetry
+WHERE timestamp > current_timestamp() - INTERVAL 1 DAY
+ORDER BY timestamp DESC;
+
+-- Analyze feedback trends
+SELECT 
+  DATE(timestamp) as date,
+  feedback_value,
+  COUNT(*) as count
+FROM catalog.schema.chat_telemetry
+WHERE feedback_value IS NOT NULL
+GROUP BY date, feedback_value
+ORDER BY date DESC;
+
+-- Track response times
+SELECT 
+  AVG(response_time_ms) as avg_response_time,
+  MAX(response_time_ms) as max_response_time,
+  COUNT(*) as total_requests
+FROM catalog.schema.chat_telemetry
+
 ```
+## 🔗 Related Resources
 
-The schema is dynamically created based on `PGAPPNAME` and `PGUSER` to support multi-tenancy.
-
-### OAuth Token Management
-
-PostgreSQL credentials use OAuth tokens that are automatically refreshed every 15 minutes:
-
-```python
-def refresh_oauth_token():
-    workspace_client.config.oauth_token().access_token
-```
-
-## Usage Examples
-
-### Basic Chat
-1. Launch the app and enter a question in the chat input
-2. View the streaming response in real-time
-3. Provide feedback using thumbs up/down
-
-### Tool Calling
-When the agent needs to call tools, you'll see:
-```
-🛠️ Calling `get_weather` with:
-{
-  "location": "San Francisco"
-}
-```
-
-### Chat History
-- Click **🔄 Refresh** to reload recent conversations
-- Click any conversation to view its full contents
-- Click **📝 New Chat** to start a fresh conversation
-
-## Troubleshooting
-
-### Database Connection Issues
-If you see "⚠️ Running without database persistence":
-- Verify LakeBase credentials in `.env`
-- Check OAuth token refresh settings
-- Ensure network connectivity to PostgreSQL host
-
-### Endpoint Errors
-If responses fail:
-- Verify `SERVING_ENDPOINT` environment variable
-- Check endpoint permissions (`CAN_QUERY`)
-- Review endpoint logs in Databricks workspace
-
-### Streaming Issues
-The app automatically falls back to non-streaming mode if streaming fails.
-
-## Contributing
-
-Contributions are welcome! Please follow these guidelines:
-1. Fork the repository
-2. Create a feature branch
-3. Add tests for new functionality
-4. Submit a pull request
-
-## License
-
-This project is licensed under the MIT License.
-
-## Resources
-
-- [Databricks Agent Framework Documentation](https://docs.databricks.com/en/generative-ai/agent-framework/index.html)
-- [Databricks Apps Documentation](https://docs.databricks.com/en/generative-ai/agent-framework/chat-app.html)
-- [LakeBase Documentation](https://docs.databricks.com/en/lakehouse-architecture/lakebase.html)
-- [Streamlit Documentation](https://docs.streamlit.io)
-
-## Support
-
-For issues and questions:
-- Open an issue in this repository
-- Contact the Databricks support team
-- Check the Databricks community forums
-
----
-
-**Built with ❤️ using Databricks AgentBricks and LakeBase**
+- [Databricks Apps Documentation](https://docs.databricks.com/apps/)
+- [Zerobus SDK Documentation](https://docs.databricks.com/zerobus/)
+- [Databricks Model Serving](https://docs.databricks.com/machine-learning/model-serving/)
+- [Unity Catalog](https://docs.databricks.com/unity-catalog/)
 
