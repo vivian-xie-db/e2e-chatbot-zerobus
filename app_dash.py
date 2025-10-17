@@ -2,6 +2,7 @@ import logging
 import os
 import time
 import uuid
+import threading
 from datetime import datetime
 from dash import Dash, html, dcc, Input, Output, State, callback, ctx, no_update, ALL, MATCH
 import dash_bootstrap_components as dbc
@@ -41,16 +42,91 @@ print(f"Client secret: {client_secret}")
 
 stream = None
 stream_initialized = True
+stream_lock = threading.Lock()
+
 # Initialize SDK
-def init_zerobus():
+def init_zerobus(force_reinit=False):
+    """Initialize or reinitialize the Zerobus stream.
+    
+    Args:
+        force_reinit: If True, close existing stream and create new one
+    """
     global stream, stream_initialized
-    if stream is not None:
-        return
-    sdk = ZerobusSdk(server_endpoint, workspace_url)
-    table_properties = TableProperties(table_name, record_pb2.Chat.DESCRIPTOR)
-    stream = sdk.create_stream(client_id, client_secret, table_properties)
-    stream_initialized = True
-    return True
+    
+    with stream_lock:
+        try:
+            # Close existing stream if reinitializing
+            if force_reinit and stream is not None:
+                try:
+                    stream.close()
+                    logger.info("Closed existing Zerobus stream")
+                except Exception as e:
+                    logger.warning(f"Error closing stream: {str(e)}")
+                stream = None
+            
+            # Create new stream if needed
+            if stream is None or force_reinit:
+                logger.info("Initializing Zerobus stream...")
+                sdk = ZerobusSdk(server_endpoint, workspace_url)
+                table_properties = TableProperties(table_name, record_pb2.Chat.DESCRIPTOR)
+                stream = sdk.create_stream(client_id, client_secret, table_properties)
+                stream_initialized = True
+                logger.info("Zerobus stream initialized successfully")
+                return True
+            return True
+        except Exception as e:
+            logger.error(f"Failed to initialize Zerobus: {str(e)}")
+            stream = None
+            stream_initialized = False
+            return False
+
+def send_telemetry_with_retry(record, max_retries=3):
+    """Send telemetry with automatic retry and reconnection.
+    
+    Args:
+        record: The protobuf record to send
+        max_retries: Maximum number of retry attempts
+    
+    Returns:
+        True if successful, False otherwise
+    """
+    global stream
+    
+    for attempt in range(max_retries):
+        try:
+            # Check if stream exists and is valid
+            if stream is None:
+                logger.info(f"Stream not initialized, initializing... (attempt {attempt + 1}/{max_retries})")
+                if not init_zerobus(force_reinit=False):
+                    time.sleep(1)  # Wait before retry
+                    continue
+            
+            # Try to send the record
+            ack = stream.ingest_record(record)
+            ack.wait_for_ack()
+            logger.info(f"Telemetry sent successfully to Zerobus: {ack}")
+            return True
+            
+        except Exception as e:
+            error_msg = str(e)
+            logger.warning(f"Failed to send telemetry (attempt {attempt + 1}/{max_retries}): {error_msg}")
+            
+            # Check if error is due to closed stream
+            if "closed" in error_msg.lower() or "connection" in error_msg.lower():
+                logger.info("Stream appears closed, reinitializing...")
+                # Force reinitialize on next attempt
+                if not init_zerobus(force_reinit=True):
+                    time.sleep(1)  # Wait before retry
+                    continue
+            
+            # Wait before retry (exponential backoff)
+            if attempt < max_retries - 1:
+                wait_time = 2 ** attempt  # 1s, 2s, 4s
+                logger.info(f"Waiting {wait_time}s before retry...")
+                time.sleep(wait_time)
+    
+    logger.error(f"Failed to send telemetry after {max_retries} attempts")
+    return False
 
 # Initialize telemetry at startup
 init_zerobus()
@@ -353,20 +429,17 @@ def get_model_response(trigger_data, current_messages, chat_history, session_dat
         logger.info("Session data: %s", session_data)
         logger.info("Chat history: %s", chat_history)
         logger.info("Current messages: %s", current_messages)
-        # Send telemetry to Zerobus
-        if stream is not None:
-            try:
-                record = record_pb2.Chat(
-                    telemetry_id=str(uuid.uuid4()),
-                    user_message=user_input[:10000],  # Limit size
-                    assistant_message=response_text[:10000],
-                    response_time_ms=response_time_ms
-                )
-                ack = stream.ingest_record(record)
-                ack.wait_for_ack() 
-                logger.info("Telemetry sent to Zerobus: %s", ack)
-            except Exception as e:
-                logger.warning(f"Failed to send telemetry: {str(e)}")
+        # Send telemetry to Zerobus with automatic retry
+        try:
+            record = record_pb2.Chat(
+                telemetry_id=str(uuid.uuid4()),
+                user_message=user_input[:10000],  # Limit size
+                assistant_message=response_text[:10000],
+                response_time_ms=response_time_ms
+            )
+            send_telemetry_with_retry(record, max_retries=3)
+        except Exception as e:
+            logger.warning(f"Unexpected error sending telemetry: {str(e)}")
         
         # Create bot response
         bot_response = html.Div([

@@ -17,6 +17,7 @@ An end-to-end chatbot application built with **Databricks AgentBricks** and **Ze
 - 📈 **Model Serving Integration**: Direct integration with Databricks Model Serving endpoints
 - 🚀 **Databricks Apps Ready**: Deploy directly to Databricks Apps using Asset Bundles
 - 🔄 **CI/CD Integration**: GitHub Actions workflow for automated DABS deployment
+- 🔁 **Automatic Retry Logic**: Resilient telemetry with automatic reconnection on connection drops
 
 ## 📋 Prerequisites
 
@@ -37,6 +38,7 @@ An end-to-end chatbot application built with **Databricks AgentBricks** and **Ze
 git clone <your-repo-url>
 cd e2e-chatbot-app-zerobus
 ```
+
 ## 🔧 Development
 
 ### Generate Protobuf Schema
@@ -96,8 +98,6 @@ pip install -r requirements.txt
 pip install databricks_zerobus_ingest_sdk-0.1.0-py3-none-any.whl
 ```
 
-
-
 ### Resource Flow
 
 ```text
@@ -118,7 +118,6 @@ pip install databricks_zerobus_ingest_sdk-0.1.0-py3-none-any.whl
 │  (Unity Catalog)    │
 └─────────────────────┘
 ```
-
 
 #### Configure Variables
 
@@ -161,8 +160,6 @@ databricks bundle deploy --target dev
 3. Configure environment variables in `app.yaml`
 4. Deploy and start the app
 
-
-
 ### Telemetry Data
 
 Query your telemetry data in Unity Catalog:
@@ -189,7 +186,17 @@ SELECT
   MAX(response_time_ms) as max_response_time,
   COUNT(*) as total_requests
 FROM catalog.schema.chat_telemetry
+WHERE event_type = 'response';
+```
 
+
+### Retry Mechanism
+
+```python
+# Default retry configuration
+- Max retries: 3 attempts
+- Exponential backoff: 1s, 2s, 4s between retries
+- Automatic stream recreation on connection errors
 ```
 ## 🔗 Related Resources
 
@@ -197,4 +204,3 @@ FROM catalog.schema.chat_telemetry
 - [Zerobus SDK Documentation](https://docs.databricks.com/zerobus/)
 - [Databricks Model Serving](https://docs.databricks.com/machine-learning/model-serving/)
 - [Unity Catalog](https://docs.databricks.com/unity-catalog/)
-
