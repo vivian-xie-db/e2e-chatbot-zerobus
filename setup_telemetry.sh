@@ -26,7 +26,6 @@ echo ""
 echo "📦 Syncing dependencies with uv..."
 if [ -f "databricks_zerobus_ingest_sdk-0.1.0-py3-none-any.whl" ]; then
     uv sync
-    uv pip install --force-reinstall databricks_zerobus_ingest_sdk-0.1.0-py3-none-any.whl
     echo "✅ All dependencies installed (including Zerobus SDK)"
 else
     echo "⚠️  Warning: databricks_zerobus_ingest_sdk-0.1.0-py3-none-any.whl not found"
