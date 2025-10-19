@@ -3,6 +3,8 @@ import os
 import time
 import uuid
 import threading
+import signal
+import atexit
 from datetime import datetime
 from dash import Dash, html, dcc, Input, Output, State, callback, ctx, no_update, ALL, MATCH
 import dash_bootstrap_components as dbc
@@ -33,12 +35,6 @@ workspace_url = os.getenv('ZEROBUS_HOST')
 table_name = os.getenv('ZEROBUS_TABLE')
 client_id = os.getenv('DATABRICKS_CLIENT_ID')
 client_secret = os.getenv('DATABRICKS_CLIENT_SECRET')
-
-print(f"Server endpoint: {server_endpoint}")
-print(f"Workspace URL: {workspace_url}")
-print(f"Table name: {table_name}")
-print(f"Client ID: {client_id}")
-print(f"Client secret: {client_secret}")
 
 stream = None
 stream_initialized = True
@@ -127,6 +123,32 @@ def send_telemetry_with_retry(record, max_retries=3):
     
     logger.error(f"Failed to send telemetry after {max_retries} attempts")
     return False
+
+# Cleanup function for graceful shutdown
+def cleanup_zerobus():
+    """Close Zerobus stream on application shutdown."""
+    global stream
+    
+    if stream is not None:
+        try:
+            logger.info("Closing Zerobus stream...")
+            stream.close()
+            stream = None
+            logger.info("Zerobus stream closed successfully")
+        except Exception as e:
+            logger.error(f"Error closing Zerobus stream: {str(e)}")
+
+# Signal handlers for graceful shutdown
+def handle_shutdown_signal(signum, frame):
+    """Handle shutdown signals (SIGTERM, SIGINT)."""
+    logger.info(f"Received signal {signum}, shutting down gracefully...")
+    cleanup_zerobus()
+    exit(0)
+
+# Register cleanup handlers
+atexit.register(cleanup_zerobus)
+signal.signal(signal.SIGTERM, handle_shutdown_signal)
+signal.signal(signal.SIGINT, handle_shutdown_signal)
 
 # Initialize telemetry at startup
 init_zerobus()
@@ -635,9 +657,18 @@ def handle_feedback(up_clicks, down_clicks, up_class, down_class):
 
 
 if __name__ == "__main__":
-    app.run(
-        debug=True,
-        host="0.0.0.0",
-        port=8000
-    )
+    try:
+        logger.info("Starting Dash application...")
+        app.run(
+            debug=True,
+            host="0.0.0.0",
+            port=8000
+        )
+    except Exception as e:
+        logger.error(f"Application error: {str(e)}")
+        raise
+    finally:
+        # Ensure cleanup happens even if there are exceptions
+        logger.info("Application shutting down, cleaning up resources...")
+        cleanup_zerobus()
 
